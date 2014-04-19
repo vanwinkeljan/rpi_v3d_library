@@ -53,7 +53,7 @@ GhwMemAllocator* GhwMemAllocator::create(u32 mode , u32 slab_size , u32 alignmen
 {
     GhwAllocatorImpl* allocator = new GhwAllocatorImpl(mode,slab_size,alignment);
     if(allocator->initCheck()) {
-		LOGE("allocator initcheck failed");
+		ALOGE("allocator initcheck failed");
         delete allocator;
         return NULL;
     }
@@ -74,7 +74,7 @@ GhwAllocatorDevice::GhwAllocatorDevice() :mFd(-1) {
 #ifdef USE_BMEM
 	mFd = open(DEVICE_NAME, O_RDWR | O_SYNC);
 	if(mFd <= 0 ) {
-		LOGE("GhwAllocatorDevice device open failed for %s\n",DEVICE_NAME);
+		ALOGE("GhwAllocatorDevice device open failed for %s\n",DEVICE_NAME);
 		}
 #endif
 	count++;
@@ -124,7 +124,7 @@ void* GhwAllocatorDevice::allocDevMem(u32& pa, unsigned char*& va,u32 size) {
 	ioctl(mFd, GEMEMALLOC_WRAP_ACQUIRE_BUFFER, &params);
 	if(params.busAddress == 0)
 	{
-		LOGE("GhwAllocatorDevice zero linear buffer allocated %d\n",tempSize);
+		ALOGE("GhwAllocatorDevice zero linear buffer allocated %d\n",tempSize);
 		return 0;
 	}
 
@@ -135,7 +135,7 @@ void* GhwAllocatorDevice::allocDevMem(u32& pa, unsigned char*& va,u32 size) {
 											params.busAddress);
 	if(va == (unsigned char *)0xFFFFFFFF)
 	{
-		LOGE("GhwAllocatorDevice mmap failed");
+		ALOGE("GhwAllocatorDevice mmap failed");
 		ioctl(mFd, GEMEMALLOC_WRAP_RELEASE_BUFFER, &pa);
 		pa = 0;
 		va = 0;
@@ -377,7 +377,7 @@ ghw_error_e GhwAllocatorImpl::dump(u32 level )
 {
 	protect();
 
-	LOGD("GhwAllocatorImpl Static Counters %d %d %d\n",GhwAllocatorImpl::count,GhwMemBlock::count,GhwAllocatorDevice::count);
+	ALOGD("GhwAllocatorImpl Static Counters %d %d %d\n",GhwAllocatorImpl::count,GhwMemBlock::count,GhwAllocatorDevice::count);
 
 	u32 maxFree = 0, totalFree = 0;
 
@@ -389,7 +389,7 @@ ghw_error_e GhwAllocatorImpl::dump(u32 level )
 		node = node->getNext();
 	}
 
-	LOGD("GhwAllocatorImpl[%x] totalDeviceAllocSize[%d] totalFree[%d] maxFree[%d] in numSlabs[%d]\n",
+	ALOGD("GhwAllocatorImpl[%x] totalDeviceAllocSize[%d] totalFree[%d] maxFree[%d] in numSlabs[%d]\n",
 									this,mTotalAllocSize,totalFree,maxFree,mList.getCount());
 	if (level) {
 		level--;

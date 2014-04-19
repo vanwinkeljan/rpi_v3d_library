@@ -72,7 +72,7 @@ public:
     u32 isUsed() { return mUsed;};
 
     virtual    ghw_error_e dump(u32 level = 0){
-        LOGD("\t\tGhwMemSubBlock[%x] offset[%08x] size[%08x] used[%d]\n",this,mOffset,mSize,mUsed);
+        ALOGD("\t\tGhwMemSubBlock[%p] offset[%08x] size[%08x] used[%d]\n",this,mOffset,mSize,mUsed);
         return GHW_ERROR_NONE;};
 	static int count;
 
@@ -287,18 +287,18 @@ ghw_error_e GhwMemBlock::dump(u32 level )
 	u32 maxFreeSize = 0;
 	if (mFreeList.getTail()) maxFreeSize = mFreeList.getTail()->get()->getSize();
 
-    LOGD("\tGhwMemBlock[%x] pa[0x%08x] va[0x%08x] size[%d] alloc[%d] free[%d] maxFree[%d] refCnt[%d] fullList[%d] freeList[%d] \n",
+    ALOGD("\tGhwMemBlock[%x] pa[0x%08x] va[0x%08x] size[%d] alloc[%d] free[%d] maxFree[%d] refCnt[%d] fullList[%d] freeList[%d] \n",
 					this, ipa_addr,v_addr,mSize, mAllocSize, mSize-mAllocSize, maxFreeSize, getRefCnt(), mList.getCount(), mFreeList.getCount());
 	if(level) {
 		level--;
-		LOGD("\tFull List\n");
+		ALOGD("\tFull List\n");
 		GhwMemSubBlockNode* node = mList.getHead();
 		while(node) {
 			node->get()->dump(level);
 			node = node->getNext();
 		}
 
-		LOGD("\tFree List\n");
+		ALOGD("\tFree List\n");
 		node = mFreeList.getHead();
 		while(node) {
 			node->get()->dump(level);

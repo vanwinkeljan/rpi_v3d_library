@@ -79,7 +79,7 @@ static inline int cacheops(char in_flush, unsigned int pstart,unsigned int vstar
     	fd_cacheops = open(BRCM_CACHE, O_RDWR);
     	if(fd_cacheops < 0)
     	{
-        	LOGV("Error in opening the cache device!!!!\n");
+        	ALOGV("Error in opening the cache device!!!!\n");
         	return errno;
     	}
     	else
@@ -91,7 +91,7 @@ static inline int cacheops(char in_flush, unsigned int pstart,unsigned int vstar
         	ret=ioctl(fd_cacheops,CACHE_OPS,&cache_data);
         	if(ret < 0)
         	{
-           		LOGE("Error CACHE_OPS ioctl failed %d\n",ret);
+           		ALOGE("Error CACHE_OPS ioctl failed %d\n",ret);
         	}
         	close(fd_cacheops);
         	fd_cacheops = -1;

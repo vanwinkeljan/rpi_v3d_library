@@ -41,15 +41,15 @@ GhwComposer* GhwComposer::create(u32 width, u32 height, u32 num_layers)
 
     ghw_composer = new GhwComposerV3d();
     if (ghw_composer == NULL) {
-        LOGE("%s failed pid[%d]tid[%d] \n", __FUNCTION__, getpid(), gettid());
+        ALOGE("%s failed pid[%d]tid[%d] \n", __FUNCTION__, getpid(), gettid());
         return NULL;
     }
 
     if (ghw_composer->init() == GHW_ERROR_NONE) {
-        LOGT("%s success[%p] \n", __FUNCTION__, ghw_composer);
+        ALOGT("%s success[%p] \n", __FUNCTION__, ghw_composer);
         return ghw_composer;
     } else {
-        LOGE("%s failed pid[%d]tid[%d] \n", __FUNCTION__, getpid(), gettid());
+        ALOGE("%s failed pid[%d]tid[%d] \n", __FUNCTION__, getpid(), gettid());
         delete ghw_composer;
         return NULL;
     }
@@ -59,7 +59,7 @@ GhwComposer* GhwComposer::create(u32 width, u32 height, u32 num_layers)
 
 GhwComposer::~GhwComposer()
 {
-    LOGT("%s[%p] \n", __FUNCTION__, this);
+    ALOGT("%s[%p] \n", __FUNCTION__, this);
 }
 
 /**
@@ -76,12 +76,12 @@ GhwComposerV3d::GhwComposerV3d()
         v3dShaders[i] = NULL;
     }
     pthread_mutex_init(&mLock,NULL);
-    LOGT("%s[%p] \n", __FUNCTION__, this);
+    ALOGT("%s[%p] \n", __FUNCTION__, this);
 }
 
 GhwComposerV3d::~GhwComposerV3d()
 {
-    LOGT("%s[%p] \n", __FUNCTION__, this);
+    ALOGT("%s[%p] \n", __FUNCTION__, this);
 
     barrier();
 
@@ -118,7 +118,7 @@ ghw_error_e GhwComposerV3d::init()
     /* open v3d devices */
     fdV3d = open(V3D_DEVICE,    O_RDONLY);
     if(fdV3d == -1) {
-        LOGE("%s[%p] failed to open [%s] \n", __FUNCTION__, this, V3D_DEVICE);
+        ALOGE("%s[%p] failed to open [%s] \n", __FUNCTION__, this, V3D_DEVICE);
         return GHW_ERROR_FAIL;
     }
 
@@ -134,17 +134,17 @@ ghw_error_e GhwComposerV3d::init()
                 memcpy(virt_addr, ghwV3dShaders[i], ghwV3dShaderSizes[i]);
                 v3dShaders[i]->unlock();
             } else {
-                LOGE("%s[%p] failed to lock v3dShaders[%d] \n",  __FUNCTION__, this, i);
+                ALOGE("%s[%p] failed to lock v3dShaders[%d] \n",  __FUNCTION__, this, i);
                 return GHW_ERROR_FAIL;
             }
         } else {
-            LOGE("%s[%p] failed to allocate v3dShaders[%d] \n",  __FUNCTION__, this, i);
+            ALOGE("%s[%p] failed to allocate v3dShaders[%d] \n",  __FUNCTION__, this, i);
             return GHW_ERROR_FAIL;
         }
     }
 
-   LOGT("%s[%p] fd[%d] \n", __FUNCTION__, this, fdV3d);
-    return GHW_ERROR_NONE;
+   ALOGT("%s[%p] fd[%d] \n", __FUNCTION__, this, fdV3d);
+   return GHW_ERROR_NONE;
 }
 
 /* Provide an identifier */
@@ -163,7 +163,7 @@ ghw_error_e GhwComposerV3d::postJob(GhwMemHandle* bin_list_handle, u32 bin_size,
 #endif
     u32 bin_ipa_addr, rend_ipa_addr, size;
     void *virt_addr;
-    LOGT("%s[%p] fd[%d] \n", __FUNCTION__, this, fdV3d);
+    ALOGT("%s[%p] fd[%d] \n", __FUNCTION__, this, fdV3d);
 
     if (bin_list_handle) {
         bin_list_handle->lock(bin_ipa_addr, virt_addr, size);
@@ -189,7 +189,7 @@ ghw_error_e GhwComposerV3d::postJob(GhwMemHandle* bin_list_handle, u32 bin_size,
     job_status.timeout = -1;
     job_status.job_id = 0;
     if (ioctl(fdV3d, V3D_IOCTL_POST_JOB, &job_post) < 0) {
-        LOGE("ioctl [0x%x] failed \n", V3D_IOCTL_POST_JOB);
+        ALOGE("ioctl [0x%x] failed \n", V3D_IOCTL_POST_JOB);
     }
 #endif
 	mList.addElement(job,0);
@@ -203,7 +203,7 @@ ghw_error_e GhwComposerV3d::postJob(GhwMemHandle* bin_list_handle, u32 bin_size,
 
 ghw_error_e GhwComposerV3d::waitJobCompletion()
 {
-    LOGT("%s[%p] fd[%d] \n", __FUNCTION__, this, fdV3d);
+    ALOGT("%s[%p] fd[%d] \n", __FUNCTION__, this, fdV3d);
 #ifndef PC_BUILD
     v3d_job_status_t job_status;
 
@@ -211,20 +211,20 @@ ghw_error_e GhwComposerV3d::waitJobCompletion()
     job_status.job_status = V3D_JOB_STATUS_INVALID;
     job_status.timeout = -1;
     if (ioctl(fdV3d, V3D_IOCTL_WAIT_JOB, &job_status) < 0) {
-        LOGE("%s[%p] ioctl[0x%x] failed \n", __FUNCTION__, this, V3D_IOCTL_WAIT_JOB);
+        ALOGE("%s[%p] ioctl[0x%x] failed \n", __FUNCTION__, this, V3D_IOCTL_WAIT_JOB);
     }
-    LOGV_IF((job_status.job_status != V3D_JOB_STATUS_SUCCESS), "%s[%p] job status[%d] \n", __FUNCTION__, this, job_status.job_status);
+    ALOGV_IF((job_status.job_status != V3D_JOB_STATUS_SUCCESS), "%s[%p] job status[%d] \n", __FUNCTION__, this, job_status.job_status);
 #endif
     return GHW_ERROR_NONE;
 }
 
 ghw_error_e GhwComposerV3d::cacheFlush()
 {
-    LOGT("%s[%p] \n", __FUNCTION__, this);
+    ALOGT("%s[%p] \n", __FUNCTION__, this);
 #ifndef PC_BUILD
     if(cacheops('F',0x0,0x0,0x20000)<0)
     {
-        LOGE("Error in flushing cache\n");
+        ALOGE("Error in flushing cache\n");
         return GHW_ERROR_FAIL;
     }
 #endif
@@ -502,7 +502,7 @@ ghw_error_e GhwComposerV3d::appendFbShaderRec(GhwImgBuf* src_img, GhwImgBuf* dst
             break;
 
         default:
-            LOGE("%s[%p] Invalid src format [%d] \n", __FUNCTION__, this, src_format);
+            ALOGE("%s[%p] Invalid src format [%d] \n", __FUNCTION__, this, src_format);
             return GHW_ERROR_FAIL;
             break;
     }
@@ -776,13 +776,13 @@ ghw_error_e GhwComposerV3d::appendRgb2YuvShaderRec(GhwImgBuf* src_img, GhwImgBuf
 				break;
 
 			default:
-				LOGE("%s[%p] Invalid src format [%d] \n", __FUNCTION__, this, src_format);
+				ALOGE("%s[%p] Invalid src format [%d] \n", __FUNCTION__, this, src_format);
 				return GHW_ERROR_FAIL;
 		}
 
         v3dShaders[RGB2YUV422I_SHADER]->lock(code, virt_addr, size);
     } else {
-        LOGE("%s[%p] Invalid src format [%d] \n", __FUNCTION__, this, src_format);
+        ALOGE("%s[%p] Invalid src format [%d] \n", __FUNCTION__, this, src_format);
         return GHW_ERROR_FAIL;
     }
 
@@ -906,7 +906,7 @@ ghw_error_e GhwComposerV3d::appendYUV444ShaderRec(GhwImgBuf* src_img, GhwImgBuf*
 
         v3dShaders[YUV444_SHADER]->lock(code, virt_addr, size);
     } else {
-        LOGE("%s[%p] Invalid src format [%d] \n", __FUNCTION__, this, src_format);
+        ALOGE("%s[%p] Invalid src format [%d] \n", __FUNCTION__, this, src_format);
         return GHW_ERROR_FAIL;
     }
 
@@ -1154,7 +1154,7 @@ ghw_error_e GhwComposerV3d::appendYscaleShaderRec(GhwImgBuf* src_img, GhwImgBuf*
 
         v3dShaders[YSCALE_SHADER]->lock(code, virt_addr, size);
     } else {
-        LOGE("%s[%p] Invalid src format [%d] \n", __FUNCTION__, this, src_format);
+        ALOGE("%s[%p] Invalid src format [%d] \n", __FUNCTION__, this, src_format);
         return GHW_ERROR_FAIL;
     }
 
@@ -1488,7 +1488,7 @@ ghw_error_e GhwComposerV3d::appendYtileShaderRec(GhwImgBuf* src_img, GhwImgBuf* 
 
         v3dShaders[YTILE_SHADER]->lock(code, virt_addr, size);
     } else {
-        LOGE("%s[%p] Invalid src format [%d] \n", __FUNCTION__, this, src_format);
+        ALOGE("%s[%p] Invalid src format [%d] \n", __FUNCTION__, this, src_format);
         return GHW_ERROR_FAIL;
     }
 
@@ -1604,7 +1604,7 @@ ghw_error_e GhwComposerV3d::appendYuvTileShaderRec(GhwImgBuf* src_img, GhwImgBuf
 
         v3dShaders[YUVTILE_SHADER]->lock(code, virt_addr, size);
     } else {
-        LOGE("%s[%p] Invalid src format [%d] \n", __FUNCTION__, this, src_format);
+        ALOGE("%s[%p] Invalid src format [%d] \n", __FUNCTION__, this, src_format);
         return GHW_ERROR_FAIL;
     }
 
@@ -1742,7 +1742,7 @@ ghw_error_e GhwComposerV3d::appendYuvShaderRec(GhwImgBuf* src_img, GhwImgBuf* ds
         }
         v3dShaders[YUV422I_SHADER]->lock(code, virt_addr, size);
     } else {
-        LOGE("%s[%p] Invalid src format [%d] \n", __FUNCTION__, this, src_format);
+        ALOGE("%s[%p] Invalid src format [%d] \n", __FUNCTION__, this, src_format);
         return GHW_ERROR_FAIL;
     }
     shader_record->code = code;
@@ -1868,7 +1868,7 @@ ghw_error_e GhwComposerV3d::createRendList(GhwImgBuf* src_img, GhwImgBuf* dst_im
 			v3d_format_code |= 0x4;
 			break;
         default:
-            LOGE("%s[%p] Dst format[%d] not supported \n", __FUNCTION__, this, dst_format);
+            ALOGE("%s[%p] Dst format[%d] not supported \n", __FUNCTION__, this, dst_format);
             ret = GHW_ERROR_FAIL;
 			return ret;
     }
@@ -1960,7 +1960,7 @@ ghw_error_e GhwComposerV3d::createRendList(GhwImgBuf* src_img, GhwImgBuf* dst_im
 ghw_error_e GhwComposerV3d::isImgProcessValid(GhwImgBuf* src_img, GhwImgBuf* dst_img, GhwImgOp* op)
 {
     if ((src_img == NULL) || (dst_img == NULL) || (op == NULL)) {
-        LOGE("%s[%p] NULL param src[%p] dst[%p] op[%p] \n", __FUNCTION__, this, src_img, dst_img, op);
+        ALOGE("%s[%p] NULL param src[%p] dst[%p] op[%p] \n", __FUNCTION__, this, src_img, dst_img, op);
         return GHW_ERROR_ARG;
     }
     return GHW_ERROR_NONE;
@@ -1970,7 +1970,7 @@ ghw_error_e GhwComposerV3d::barrier(void)
 {
     u32 tail_id;
 
-    LOGT("%s[%p] \n", __FUNCTION__, this);
+    ALOGT("%s[%p] \n", __FUNCTION__, this);
     pthread_mutex_lock(&mLock);
 	JobList list;
 	JobNode* node = mList.getHead();
@@ -2007,10 +2007,10 @@ ghw_error_e GhwComposerV3d::imgProcess(GhwImgBuf* src, GhwImgBuf* dst, GhwImgOp*
     GhwMemHandle *rend_list_handle;
     u32          rend_size, rend_list_size, job_id;
 
-    LOGT("%s[%p] \n", __FUNCTION__, this);
+    ALOGT("%s[%p] \n", __FUNCTION__, this);
     pthread_mutex_lock(&mLock);
     if((ret = isImgProcessValid(src, dst, op)) != GHW_ERROR_NONE) {
-        LOGE("%s[%p] failed[%d] \n", __FUNCTION__, this, ret);
+        ALOGE("%s[%p] failed[%d] \n", __FUNCTION__, this, ret);
         pthread_mutex_unlock(&mLock);
         return ret;
     }
@@ -2049,7 +2049,7 @@ ghw_error_e GhwComposerV3d::imgProcess(GhwImgBuf* src, GhwImgBuf* dst, GhwImgOp*
 				delete job;
 				delete src_img ;
 				delete dst_img ;
-				LOGE("%s[%p] failed[%d] \n", __FUNCTION__, this, GHW_ERROR_ARG);
+				ALOGE("%s[%p] failed[%d] \n", __FUNCTION__, this, GHW_ERROR_ARG);
 				pthread_mutex_unlock(&mLock);
 				return GHW_ERROR_ARG;
 			   }
@@ -2141,7 +2141,7 @@ ghw_error_e GhwComposerV3d::imgProcess(GhwImgBuf* src, GhwImgBuf* dst, GhwImgOp*
     /* Create rend list */
     rend_size = 0;
     createRendList(src_img, dst_img, rend_list_handle, tile_alloc_handle, rend_size);
-    LOGT("%s[%p] bin[%d %d] rend[%d %d] ta[%d] ts[%d] \n",
+    ALOGT("%s[%p] bin[%d %d] rend[%d %d] ta[%d] ts[%d] \n",
         __FUNCTION__, this, bin_list_size, bin_size, rend_list_size, rend_size, tile_alloc_size, tile_state_size);
 
     /* Post the job */
@@ -2169,16 +2169,16 @@ ghw_error_e GhwComposerV3d::compSetFb(GhwImgBuf* fb_img, u32 dither_flag)
 	GhwMemHandle* fb_handle = NULL;
 	ghw_error_e ret;
 
-    LOGT("%s[%p] \n", __FUNCTION__, this);
+    ALOGT("%s[%p] \n", __FUNCTION__, this);
     pthread_mutex_lock(&mLock);
     if (composeReqs >= 0) {
-        LOGE("%s[%p] setFb without commit \n", __FUNCTION__, this);
+        ALOGE("%s[%p] setFb without commit \n", __FUNCTION__, this);
         pthread_mutex_unlock(&mLock);
         compCommit(1);
         pthread_mutex_lock(&mLock);
     }
 	if( fb_img == NULL) {
-        LOGE("%s[%p] fb image is NULL \n", __FUNCTION__, this);
+        ALOGE("%s[%p] fb image is NULL \n", __FUNCTION__, this);
         pthread_mutex_unlock(&mLock);
 		return GHW_ERROR_ARG;
 		}
@@ -2234,9 +2234,9 @@ ghw_error_e GhwComposerV3d::compDrawRect(GhwImgBuf* src_img, GhwImgOp* op)
     GhwMemHandle *src_handle, *shader_rec_handle;
     u32 shader_rec_size;
 
-    LOGT("%s[%p] \n", __FUNCTION__, this);
+    ALOGT("%s[%p] \n", __FUNCTION__, this);
     if (composeReqs < 0) {
-        LOGE("%s[%p] failed compSetFb not called[%p] \n", __FUNCTION__, this, fbImg);
+        ALOGE("%s[%p] failed compSetFb not called[%p] \n", __FUNCTION__, this, fbImg);
         return GHW_ERROR_FAIL;
     }
 
@@ -2257,9 +2257,9 @@ ghw_error_e GhwComposerV3d::compCommit(u32 sync_flag)
     GhwMemHandle* rend_list_handle, *fb_handle;
     u32           rend_list_size, rend_size, job_id;
 
-    LOGT("%s[%p] \n", __FUNCTION__, this);
+    ALOGT("%s[%p] \n", __FUNCTION__, this);
     if (composeReqs < 0) {
-        LOGE("%s[%p] failed compSetFb not called[%p] \n", __FUNCTION__, this, fbImg);
+        ALOGE("%s[%p] failed compSetFb not called[%p] \n", __FUNCTION__, this, fbImg);
         return GHW_ERROR_FAIL;
     }
 
@@ -2316,12 +2316,12 @@ ghw_error_e GhwComposerV3d::dump(u32 level)
 
     size = snprintf(&buf[size_used], size_left, "\n%s[%p]: fd[%d] ", mName, this, fdV3d);
     size_used += size; size_left -= size;
-    LOGD("%s\n", buf);
+    ALOGD("%s\n", buf);
     if (shaderAlloc) {
         shaderAlloc->dump(level);
     }
 
-	LOGD("workList \n");
+	ALOGD("workList \n");
 	JobNode* node = mList.getHead();
 	while(node) {
 		node->get()->dump();
@@ -2340,17 +2340,17 @@ GhwImgBuf* GhwImgBuf::create()
 
     img_buf = new GhwImgBufImpl();
     if (img_buf == NULL) {
-        LOGE("%s failed pid[%d]tid[%d] \n", __FUNCTION__, getpid(), gettid());
+        ALOGE("%s failed pid[%d]tid[%d] \n", __FUNCTION__, getpid(), gettid());
         return NULL;
     }
-    LOGT("%s success[%p] \n", __FUNCTION__, img_buf);
+    ALOGT("%s success[%p] \n", __FUNCTION__, img_buf);
 
     return img_buf;
 }
 
 GhwImgBuf::~GhwImgBuf()
 {
-    LOGT("%s[%p] \n", __FUNCTION__, this);
+    ALOGT("%s[%p] \n", __FUNCTION__, this);
 }
 
 /**
@@ -2359,7 +2359,7 @@ GhwImgBuf::~GhwImgBuf()
 GhwImgBufImpl::GhwImgBufImpl()
     : memHandle(NULL), mWidth(0), mHeight(0), mFormat(0), mLayout(0), blendType(0), mLeft(0), mTop(0), mRight(0), mBottom(0)
 {
-    LOGT("%s[%p] \n", __FUNCTION__, this);
+    ALOGT("%s[%p] \n", __FUNCTION__, this);
 }
 
 GhwImgBufImpl::GhwImgBufImpl(GhwImgBuf* buf)
@@ -2371,7 +2371,7 @@ GhwImgBufImpl::GhwImgBufImpl(GhwImgBuf* buf)
     buf->getGeometry(mWidth, mHeight);
     buf->getFormat(mFormat, mLayout, blendType);
     buf->getCrop(mLeft, mTop, mRight, mBottom);
-    LOGT("%s[%p] \n", __FUNCTION__, this);
+    ALOGT("%s[%p] \n", __FUNCTION__, this);
 }
 
 GhwImgBufImpl::~GhwImgBufImpl()
@@ -2389,7 +2389,7 @@ GhwImgBufImpl::~GhwImgBufImpl()
     mTop      = 0;
     mRight    = 0;
     mBottom   = 0;
-    LOGT("%s[%p] \n", __FUNCTION__, this);
+    ALOGT("%s[%p] \n", __FUNCTION__, this);
 }
 
 /* Attach a memory handle to the image buffer object. Acquires (new reference to) memory */
@@ -2397,7 +2397,7 @@ ghw_error_e GhwImgBufImpl::setMemHandle(GhwMemHandle* mem_handle)
 {
     ghw_error_e ret= GHW_ERROR_NONE;
 
-    LOGT("%s[%p] mem_handle[%p] memHandle[%p] \n", __FUNCTION__, this, mem_handle, memHandle);
+    ALOGT("%s[%p] mem_handle[%p] memHandle[%p] \n", __FUNCTION__, this, mem_handle, memHandle);
     if (memHandle) {
         memHandle->release();
         memHandle = NULL;
@@ -2407,7 +2407,7 @@ ghw_error_e GhwImgBufImpl::setMemHandle(GhwMemHandle* mem_handle)
         if (ret == GHW_ERROR_NONE) {
             memHandle = mem_handle;
         }else {
-            LOGE("%s[%p] mem_handle[%p] acquire failed \n", __FUNCTION__, this, mem_handle);
+            ALOGE("%s[%p] mem_handle[%p] acquire failed \n", __FUNCTION__, this, mem_handle);
         }
     }
     return ret;
@@ -2416,14 +2416,14 @@ ghw_error_e GhwImgBufImpl::setMemHandle(GhwMemHandle* mem_handle)
 ghw_error_e GhwImgBufImpl::getMemHandle(GhwMemHandle*& mem_handle)
 {
     mem_handle = memHandle;
-    LOGT("%s[%p] memHandle[%p] \n", __FUNCTION__, this, memHandle);
+    ALOGT("%s[%p] memHandle[%p] \n", __FUNCTION__, this, memHandle);
     return GHW_ERROR_NONE;
 }
 
 /* Set the width and height (incl padding) */
 ghw_error_e GhwImgBufImpl::setGeometry(u32 width, u32 height)
 {
-    LOGT("%s[%p] width[%d] height[%d] \n", __FUNCTION__, this, width, height);
+    ALOGT("%s[%p] width[%d] height[%d] \n", __FUNCTION__, this, width, height);
     mWidth  = width;
     mHeight = height;
     return GHW_ERROR_NONE;
@@ -2433,24 +2433,24 @@ ghw_error_e GhwImgBufImpl::getGeometry(u32& width, u32& height)
 {
     width = mWidth;
     height = mHeight;
-    LOGT("%s[%p] width[%d] height[%d] \n", __FUNCTION__, this, width, height);
+    ALOGT("%s[%p] width[%d] height[%d] \n", __FUNCTION__, this, width, height);
     return GHW_ERROR_NONE;
 }
 
 /* Set the format, layout and blending */
 ghw_error_e GhwImgBufImpl::setFormat(u32 format, u32 layout,u32 blend_type)
 {
-    LOGT("%s[%p] format[%d] layout[%d] blend_type[%d] \n", __FUNCTION__, this, format, layout, blend_type);
+    ALOGT("%s[%p] format[%d] layout[%d] blend_type[%d] \n", __FUNCTION__, this, format, layout, blend_type);
     if ((format < 1) || format >= GHW_PIXEL_FORMAT_INVALID) {
-        LOGE("%s[%p] Invalid format[%d] \n", __FUNCTION__, this, format);
+        ALOGE("%s[%p] Invalid format[%d] \n", __FUNCTION__, this, format);
         return GHW_ERROR_ARG;
     }
     if ((layout < 1) || (layout > GHW_MEM_LAYOUT_TILED)) {
-        LOGE("%s[%p] Invalid layout[%d] \n", __FUNCTION__, this, layout);
+        ALOGE("%s[%p] Invalid layout[%d] \n", __FUNCTION__, this, layout);
         return GHW_ERROR_ARG;
     }
     if ((blend_type < 1) || (blend_type > GHW_BLEND_SRC_PREMULT)) {
-        LOGE("%s[%p] Invalid blend_type[%d] \n", __FUNCTION__, this, blend_type);
+        ALOGE("%s[%p] Invalid blend_type[%d] \n", __FUNCTION__, this, blend_type);
         return GHW_ERROR_ARG;
     }
     mFormat = format;
@@ -2464,14 +2464,14 @@ ghw_error_e GhwImgBufImpl::getFormat(u32& format, u32& layout,u32& blend_type)
     format = mFormat;
     layout = mLayout;
     blend_type = blendType;
-    LOGT("%s[%p] format[%d] layout[%d] blend_type[%d] \n", __FUNCTION__, this, format, layout, blend_type);
+    ALOGT("%s[%p] format[%d] layout[%d] blend_type[%d] \n", __FUNCTION__, this, format, layout, blend_type);
     return GHW_ERROR_NONE;
 }
 
 /* Set the crop window (valid image) */
 ghw_error_e GhwImgBufImpl::setCrop(u32 left, u32 top, u32 right, u32 bottom)
 {
-    LOGT("%s[%p] left[%d] top[%d] right[%d] bottom[%d] \n", __FUNCTION__, this, left, top, right, bottom);
+    ALOGT("%s[%p] left[%d] top[%d] right[%d] bottom[%d] \n", __FUNCTION__, this, left, top, right, bottom);
     mLeft   = left;
     mTop    = top;
     mRight  = right;
@@ -2482,7 +2482,7 @@ ghw_error_e GhwImgBufImpl::setCrop(u32 left, u32 top, u32 right, u32 bottom)
 /* Set the crop window (valid image) */
 ghw_error_e GhwImgBufImpl::setCrop(u32 width, u32 height)
 {
-    LOGT("%s[%p] width[%d] height[%d] \n", __FUNCTION__, this, width, height);
+    ALOGT("%s[%p] width[%d] height[%d] \n", __FUNCTION__, this, width, height);
     mLeft   = 0;
     mTop    = 0;
     mRight  = width;
@@ -2496,7 +2496,7 @@ ghw_error_e GhwImgBufImpl::getCrop(u32& left, u32& top, u32& right, u32& bottom)
     top    = mTop;
     right  = mRight;
     bottom = mBottom;
-    LOGT("%s[%p] left[%d] top[%d] right[%d] bottom[%d] \n", __FUNCTION__, this, left, top, right, bottom);
+    ALOGT("%s[%p] left[%d] top[%d] right[%d] bottom[%d] \n", __FUNCTION__, this, left, top, right, bottom);
     return GHW_ERROR_NONE;
 }
 
@@ -2504,10 +2504,10 @@ ghw_error_e GhwImgBufImpl::getCrop(u32& left, u32& top, u32& right, u32& bottom)
 ghw_error_e GhwImgBufImpl::dump(u32 level)
 {
     if (level == 0) {
-        LOGD("ImgBuf[%p]: memHandle[%p] mWidth[%d] mHeight[%d] mFormat[%d] mLayout[%d] \n",
+        ALOGD("ImgBuf[%p]: memHandle[%p] mWidth[%d] mHeight[%d] mFormat[%d] mLayout[%d] \n",
             this, memHandle, mWidth, mHeight, mFormat, mLayout);
     } else {
-        LOGD("IB[%p]: [%p] [%4d x %4d] f[%2d %d %d] c[%3d %3d %4d %4d] \n", this, memHandle, mWidth, mHeight,
+        ALOGD("IB[%p]: [%p] [%4d x %4d] f[%2d %d %d] c[%3d %3d %4d %4d] \n", this, memHandle, mWidth, mHeight,
             mFormat, mLayout, blendType, mLeft, mTop, mRight, mBottom);
         if (memHandle) {
             memHandle->dump(level);
@@ -2525,17 +2525,17 @@ GhwImgOp* GhwImgOp::create()
 
     img_op = new GhwImgOpImpl();
     if (img_op == NULL) {
-        LOGE("%s failed pid[%d]tid[%d] \n", __FUNCTION__, getpid(), gettid());
+        ALOGE("%s failed pid[%d]tid[%d] \n", __FUNCTION__, getpid(), gettid());
         return NULL;
     }
-    LOGT("%s success[%p] \n", __FUNCTION__, img_op);
+    ALOGT("%s success[%p] \n", __FUNCTION__, img_op);
 
     return img_op;
 }
 
 GhwImgOp::~GhwImgOp()
 {
-    LOGT("%s[%p] \n", __FUNCTION__, this);
+    ALOGT("%s[%p] \n", __FUNCTION__, this);
 }
 
 /**
@@ -2544,7 +2544,7 @@ GhwImgOp::~GhwImgOp()
 GhwImgOpImpl::GhwImgOpImpl()
     : mTransform(0), mLeft(0), mTop(0), mRight(0), mBottom(0)
 {
-    LOGT("%s[%p] \n", __FUNCTION__, this);
+    ALOGT("%s[%p] \n", __FUNCTION__, this);
 }
 
 GhwImgOpImpl::~GhwImgOpImpl()
@@ -2554,13 +2554,13 @@ GhwImgOpImpl::~GhwImgOpImpl()
     mTop       = 0;
     mRight     = 0;
     mBottom    = 0;
-    LOGT("%s[%p] \n", __FUNCTION__, this);
+    ALOGT("%s[%p] \n", __FUNCTION__, this);
 }
 
 /* Set the dest image (framebuffer) window  - scaling, translation parameter */
 ghw_error_e GhwImgOpImpl::setDstWindow(u32 left, u32 top, u32 right, u32 bottom)
 {
-    LOGT("%s[%p] left[%d] top[%d] right[%d] bottom[%d] \n", __FUNCTION__, this, left, top, right, bottom);
+    ALOGT("%s[%p] left[%d] top[%d] right[%d] bottom[%d] \n", __FUNCTION__, this, left, top, right, bottom);
     mLeft   = left;
     mTop    = top;
     mRight  = right;
@@ -2574,14 +2574,14 @@ ghw_error_e GhwImgOpImpl::getDstWindow(u32& left, u32& top, u32& right, u32& bot
     top    = mTop;
     right  = mRight;
     bottom = mBottom;
-    LOGT("%s[%p] left[%d] top[%d] right[%d] bottom[%d] \n", __FUNCTION__, this, left, top, right, bottom);
+    ALOGT("%s[%p] left[%d] top[%d] right[%d] bottom[%d] \n", __FUNCTION__, this, left, top, right, bottom);
     return GHW_ERROR_NONE;
 }
 
 /* Set the rotation parameter */
 ghw_error_e GhwImgOpImpl::setTransform(u32 transform)
 {
-    LOGT("%s[%p] transform[%d] \n", __FUNCTION__, this, transform);
+    ALOGT("%s[%p] transform[%d] \n", __FUNCTION__, this, transform);
     mTransform = transform;
     return GHW_ERROR_NONE;
 };
@@ -2589,14 +2589,14 @@ ghw_error_e GhwImgOpImpl::setTransform(u32 transform)
 ghw_error_e GhwImgOpImpl::getTransform(u32& transform)
 {
     transform = mTransform;
-    LOGT("%s[%p] transform[%d] \n", __FUNCTION__, this, transform);
+    ALOGT("%s[%p] transform[%d] \n", __FUNCTION__, this, transform);
     return GHW_ERROR_NONE;
 };
 
 /* Dump Image Operation info */
 ghw_error_e GhwImgOpImpl::dump(u32 level)
 {
-    LOGD("ImgOp[%p]: mTransform[%d] Window[%3d %3d %4d %4d] \n",
+    ALOGD("ImgOp[%p]: mTransform[%d] Window[%3d %3d %4d %4d] \n",
         this, mTransform, mLeft, mTop, mRight, mBottom);
     return GHW_ERROR_NONE;
 }

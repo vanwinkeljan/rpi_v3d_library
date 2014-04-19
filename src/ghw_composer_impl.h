@@ -70,7 +70,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "cacheops.h"
 #include "ghw_composer.h"
 #include "ghw_allocator.h"
-#define LOGT(x...) do {} while (0)
+#define ALOGT(x...) do {} while (0)
 
 #endif
 
@@ -1190,7 +1190,7 @@ class Job {
 				}
 			};
 		void dump() {
-			LOGD("Job = %x",this);
+			ALOGD("Job = %p",this);
 			GhwMemHandleNode* node = mList.getHead();
 			while(node) {
 				node->get()->dump();
