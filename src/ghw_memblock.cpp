@@ -25,6 +25,7 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ============================================================================ */
+#define PC_BUILD
 #include "ghw_memblock.h"
 
 namespace ghw {
@@ -72,7 +73,7 @@ public:
     u32 isUsed() { return mUsed;};
 
     virtual    ghw_error_e dump(u32 level = 0){
-        ALOGD("\t\tGhwMemSubBlock[%p] offset[%08x] size[%08x] used[%d]\n",this,mOffset,mSize,mUsed);
+        ALOGD("\t\tGhwMemSubBlock[%x] offset[%08x] size[%08x] used[%d]\n",this,mOffset,mSize,mUsed);
         return GHW_ERROR_NONE;};
 	static int count;
 

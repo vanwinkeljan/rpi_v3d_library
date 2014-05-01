@@ -29,14 +29,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _LIST_H_
 #define _LIST_H_
 
-#ifdef PC_BUILD
-#define ALOGV printf
-#define ALOGE printf
-#define ALOGD printf
-#else
+#include <map>
 #include "utils/Log.h"
-#endif
-template <class T>
+#include <assert.h>
+
+/*template <class T>
 class Node {
 public:
     Node(T obj, unsigned int key):mObject(obj),mKey(key),mNext(NULL),mPrev(NULL) {
@@ -144,6 +141,115 @@ private:
     Node<T>* mHead;
     Node<T>* mTail;
     int mCount;
+};*/
+
+template <class T>
+class List;
+
+
+template <class T>
+class Node {
+public:
+    Node(List<T> &rParent, T obj, unsigned int key)
+	: mObject(obj),
+	  mKey(key),
+	  m_rParent(rParent)
+	{
+    };
+    ~Node() {
+        mObject = 0; mKey = 0;
+    };
+    T get() { return mObject;};
+    unsigned int getKey() { return mKey;};
+    Node<T>* getNext()
+    {
+    	typename std::map<unsigned int, Node<T> *>::iterator it;
+    	it = m_rParent.m_map.find(getKey());
+
+    	assert(it != m_rParent.m_map.end());
+    	it++;
+
+    	if (it == m_rParent.m_map.end())
+    		return 0;
+    	else
+    		return it->second;
+    };
+    Node<T>* getPrev()
+	{
+		typename std::map<unsigned int, Node<T> *>::iterator it;
+    	it = m_rParent.m_map.find(getKey());
+
+    	assert(it != m_rParent.m_map.end());
+    	it--;
+
+    	if (it == m_rParent.m_map.end())
+    		return 0;
+    	else
+    		return it->second;
+	};
+
+private:
+    T mObject;
+    unsigned int mKey;
+
+    List<T> &m_rParent;
+};
+
+template <class T>
+class List {
+public:
+    List()
+	{
+	}
+
+    ~List()
+    {
+    }
+
+    int getCount()
+    {
+    	return m_map.size();
+    }
+
+    Node<T>* getHead()
+	{
+    	typename std::map<unsigned int, Node<T> *>::iterator it;
+    	it = m_map.begin();
+
+    	if (it == m_map.end())
+    		return 0;
+
+    	return it->second;
+	}
+
+    Node<T>* getTail()
+	{
+    	typename std::map<unsigned int, Node<T> *>::reverse_iterator it;
+    	it = m_map.rbegin();
+
+    	if (it == m_map.rend())
+    		return 0;
+
+    	return it->second;
+	}
+
+    Node<T>* addElement(T obj, unsigned int key)
+	{
+    	Node<T> *p = new Node<T>(*this, obj, key);
+    	m_map[key] = p;
+    	return p;
+	}
+
+  /*  void removeElement(T obj)
+    {
+    }*/
+
+    void removeNode(Node<T>* node)
+    {
+    	m_map.erase(node->getKey());
+    }
+
+    std::map<unsigned int, Node<T> *> m_map;
 };
 
 #endif

@@ -34,9 +34,9 @@ extern "C" {
 #include <pthread.h>
 };
 
-namespace ghw {
-
 #include "list.h"
+
+namespace ghw {
 
 class GhwMemBlock;
 //This class abstracts the platform. All Platform changes are done here
@@ -45,7 +45,7 @@ public:
     GhwAllocatorDevice () ;
     ~GhwAllocatorDevice () ;
     int initCheck() ;
-    void* allocDevMem(u32& pa, unsigned char*& va,u32 mSize) ;
+    void* allocDevMem(u32& pa, unsigned char*& va,u32 mSize, u32 byteAlignment = 4096) ;
     void freeDevMem(u32& pa, unsigned char*& va,u32 mSize, void* ) ;
 	void protect();
 	void unprotect();

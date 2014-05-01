@@ -11,15 +11,20 @@ endif
 LOCAL_CFLAGS:= -DLOG_TAG=\"V3d_Library\" -DBRCM_USE_BMEM
 
 #LOCAL_SHARED_LIBRARIES := libutils liblog
-LOCAL_SHARED_LIBRARIES := liblog
+LOCAL_SHARED_LIBRARIES := liblog libstlport
 
-LOCAL_SRC_FILES:= src/ghw_allocator_impl.cpp src/ghw_memblock.cpp src/ghw_composer_impl.cpp
+LOCAL_SRC_FILES:= src/ghw_allocator_impl.cpp src/ghw_memblock.cpp src/ghw_composer_impl.cpp src/malloc.c
 
 ifeq ($(USE_BMEM),true)
 	LOCAL_CFLAGS+= -DUSE_BMEM
 endif
 
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/inc $(LOCAL_PATH)/src 
+
+# STL includes
+LOCAL_C_INCLUDES += bionic
+LOCAL_C_INCLUDES += bionic/libstdc++/include
+LOCAL_C_INCLUDES += external/stlport/stlport
 
 ifeq ($(USE_BRALLOC),true)
 	LOCAL_CFLAGS+= -DUSE_BRALLOC -DUSE_HW_THREAD_SYNC -DSUPPORT_V3D_WORKLIST 

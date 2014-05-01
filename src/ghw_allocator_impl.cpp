@@ -25,10 +25,24 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ============================================================================ */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
+#include <list>
+
+#include <utils/Log.h>
+
+#define PC_BUILD
 #include "ghw_allocator_impl.h"
 
 #include "ghw_memblock.h"
+
+#include <assert.h>
+#include <asm-generic/ioctl.h>
+#include <sys/ioctl.h>
+#include <sys/mman.h>
+
 
 extern "C" {
 
@@ -36,6 +50,7 @@ extern "C" {
 #include "bralloc.h"
 #endif
 
+#undef USE_BMEM
 #ifdef USE_BMEM
 #include "bcm_gememalloc_ioctl.h"
 #include <sys/ioctl.h>
@@ -46,19 +61,210 @@ extern "C" {
 
 #endif
 
+typedef void* mspace;
+mspace create_mspace_with_base(void* base, size_t capacity, int locked);
+void* mspace_memalign(mspace msp, size_t alignment, size_t bytes);
+void mspace_free(mspace msp, void* mem);
+void mspace_malloc_stats(mspace msp);
+
+void comp(void);
+
+static mspace vram;
+
 };
+
+FILE *fd_v3d;
+unsigned int overflowPa = 0;
+unsigned int overflowSize = 1 * 1024 * 1024;
+
+
 namespace ghw {
 
-GhwMemAllocator* GhwMemAllocator::create(u32 mode , u32 slab_size , u32 alignment )
+class SimonAllocator : public GhwMemAllocator
 {
-    GhwAllocatorImpl* allocator = new GhwAllocatorImpl(mode,slab_size,alignment);
-    if(allocator->initCheck()) {
-		ALOGE("allocator initcheck failed");
-        delete allocator;
-        return NULL;
+public:
+	SimonAllocator() : GhwMemAllocator()
+	{
+		ALOGD("CONSTRUCTOR of SimonAllocator\n");
+	}
+
+    virtual ~SimonAllocator()
+    {
+    	ALOGD("DESTRUCTOR of SimonAllocator\n");
+    	reset();
     }
 
-    return allocator;
+    virtual    GhwMemHandle*   alloc(u32 size, u32 alignment = 2)
+    {
+    	SimonMemHandle *p = new SimonMemHandle(*this, size, alignment);
+    	m_handles.push_back(p);
+    	return p;
+    }
+
+    virtual    ghw_error_e     free(GhwMemHandle *p)
+    {
+    	m_handles.remove(p);
+    	delete p;
+
+    	return GHW_ERROR_NONE;
+    }
+
+    virtual    ghw_error_e     reset()
+    {
+       	std::list<GhwMemHandle *>::iterator it;
+    	for (it = m_handles.begin(); it != m_handles.end(); it++)
+    		delete *it;
+
+    	m_handles.clear();
+
+    	return GHW_ERROR_NONE;
+    }
+
+    virtual    ghw_error_e     virt2phys(u32& ipa_addr, void* virt_addr)
+    {
+    	ipa_addr = (u32)virt_addr;
+    	return GHW_ERROR_NONE;
+    }
+
+    virtual    ghw_error_e     phys2virt(u32 ipa_addr, void*& virt_addr)
+    {
+    	virt_addr = (void *)ipa_addr;
+    	return GHW_ERROR_NONE;
+    }
+
+    virtual    ghw_error_e     setName(const char *name)
+    {
+    	return GHW_ERROR_NONE;
+    }
+
+    virtual    ghw_error_e     dump(u32 level = 0)
+    {
+    	return GHW_ERROR_NONE;
+    }
+
+private:
+
+    class SimonMemHandle : public GhwMemHandle
+	{
+	public:
+		SimonMemHandle(SimonAllocator &rParent, unsigned int size, unsigned int align) :
+			GhwMemHandle(),
+			m_refCnt(1),
+			m_lockCnt(0),
+
+			m_rParent(rParent),
+
+			m_pVa(0),
+			m_pa(0),
+			m_size(size),
+			m_align(1 << align),
+
+			m_pHandle(0)
+		{
+			m_pHandle = m_rParent.m_device.allocDevMem(m_pa, m_pVa, m_size, m_align);
+			assert(m_pHandle);
+		}
+		virtual ~SimonMemHandle()
+		{
+			assert(m_pHandle);
+			free();
+		}
+
+		virtual    ghw_error_e acquire()
+		{
+			assert(m_pHandle);
+			m_refCnt++;
+			return GHW_ERROR_NONE;
+		};
+		virtual    ghw_error_e release()
+		{
+			assert(m_pHandle);
+			m_refCnt--;
+
+			if (m_refCnt == 0)
+				free();
+//			if (m_refCnt == 0)
+//				handleRelease();
+			return GHW_ERROR_NONE;
+		};
+		virtual    ghw_error_e lock(u32& ipa_addr, void*& virt_addr, u32& size)
+		{
+			assert(m_pHandle);
+
+			m_lockCnt++;
+
+			virt_addr = (void *)m_pVa;
+			m_pa = ipa_addr;
+			size = m_size;
+
+			return GHW_ERROR_NONE;
+		};
+		virtual    ghw_error_e unlock()
+		{
+			assert(m_pHandle);
+			m_lockCnt--;
+
+			return GHW_ERROR_NONE;
+		};
+		u32 getRefCnt()
+		{
+			return m_refCnt;
+		};
+
+		virtual    ghw_error_e     setName(const char *name)
+		{
+			return GHW_ERROR_NONE;
+		}
+
+		virtual    ghw_error_e     dump(u32 level = 0)
+		{
+			return GHW_ERROR_NONE;
+		}
+	private:
+		void free(void)
+		{
+			m_rParent.m_device.freeDevMem(m_pa, m_pVa, m_size, m_pHandle);
+
+			m_pa = 0;
+			m_pVa = 0;
+			m_pHandle = 0;
+		}
+
+		unsigned int m_refCnt;
+		unsigned int m_lockCnt;
+
+		unsigned char *m_pVa;
+		unsigned int m_pa;
+		const unsigned int m_size;
+		const unsigned int m_align;
+
+		void *m_pHandle;
+
+		SimonAllocator &m_rParent;
+	};
+
+    GhwAllocatorDevice m_device;
+
+    std::list<GhwMemHandle *> m_handles;
+};
+
+GhwMemAllocator* GhwMemAllocator::create(u32 mode , u32 slab_size , u32 alignment/*, bool a*/)
+{
+	/*if (a)*/
+	{
+		GhwAllocatorImpl* allocator = new GhwAllocatorImpl(mode,slab_size,alignment);
+
+		if(allocator->initCheck()) {
+			ALOGE("allocator initcheck failed");
+			delete allocator;
+			return NULL;
+		}
+
+		return allocator;
+	}
+//	/*else
+//		return new SimonAllocator();*/
+//	return new SimonAllocator();
 }
 
 int GhwAllocatorDevice::count = 0;
@@ -95,10 +301,156 @@ int GhwAllocatorDevice::initCheck() {
 	else return -1;
 }
 
-void* GhwAllocatorDevice::allocDevMem(u32& pa, unsigned char*& va,u32 size) {
+#define DMA_MAGIC 0xdd
+#define DMA_CMA_SET_SIZE _IOW(DMA_MAGIC, 10, unsigned long)
+
+static int first_time = 1;
+static FILE *dev_mem_file;
+static void *arm_phys;
+static void *virt;
+static void *phys;
+static unsigned int max_size = 87 * 1024 * 1024;
+static int free_size = (int)max_size;
+
+void* GhwAllocatorDevice::allocDevMem(u32& pa, unsigned char*& va,u32 size, u32 byteAlignment) {
+#ifdef __ARMEL__
+	if (first_time)
+	{
+		FILE *settings;
+		if (!fd_v3d)
+		{
+			fd_v3d = fopen("/dev/dmaer_4k", "r+b");
+			if(!fd_v3d) {
+				ALOGE("Could not open v3d device from allocDevMem");
+				assert(0);
+			}
+		}
+		first_time = 0;
+
+		settings = fopen("/home/pi/settings", "r");
+
+		if (settings)
+		{
+			ALOGI("settings file opened ok\n");
+			fscanf(settings, "%d", &max_size);
+
+			ALOGI("user requests %d bytes of vram\n", max_size);
+			fclose(settings);
+		}
+
+
+		int ret;
+
+		if ((ret = ioctl(fileno(fd_v3d), DMA_CMA_SET_SIZE, max_size >> 12)) < 0)
+		{
+			printf("CMA SET SIZE gave %d\n", ret);
+//			assert(0);
+		}
+
+		dev_mem_file = fopen("/dev/mem", "r+b");
+		if (!dev_mem_file)
+		{
+			printf("could not open /dev/mem\n");
+			assert(0);
+		}
+
+		arm_phys = (void *)ret;
+		printf("ARM phys mapping is %p\n", arm_phys);
+
+		assert(arm_phys);
+		phys = arm_phys;
+
+		//map in the reserved piece of memory *with a virtual address that looks exactly the same as the physical address*
+		virt = mmap(arm_phys, max_size,
+					PROT_READ | PROT_WRITE, MAP_SHARED,
+					fileno(dev_mem_file),
+					(unsigned long)arm_phys);
+
+		if (virt != arm_phys)
+		{
+			printf("could not map arm phys->virt\n");
+//			assert(0);
+		}
+
+		printf("virt mapped in at %p\n", virt);
+
+		memset(virt, 0xcc, max_size);
+
+//		virt = (void *)((unsigned int)virt + 4096);
+
+		vram = create_mspace_with_base(virt, max_size, 0);
+
+		{
+			//get some overflow memory
+			unsigned char *pOverflow;
+			allocDevMem(overflowPa, pOverflow, overflowSize);
+
+			overflowPa = (overflowPa & ~0xc0000000) | 0x40000000;
+
+			printf("overflow at %p (%08x), %d bytes\n", pOverflow, overflowPa, overflowSize);
+		}
+	}
+
+//	printf("trying to alloc - virt is %p phys is %p, currently %d bytes free\n", virt, phys, free_size);
+
+	mspace_malloc_stats(vram);
+
+	//4k align everything
+	size = (size + 4095) & ~4095;
+
+	va = (unsigned char *)mspace_memalign(vram, /*byteAlignment*/4096, size);
+
+	if (!va)
+	{
+		va = (unsigned char *)mspace_memalign(vram, byteAlignment, size);
+	}
+
+	if (va)
+	{
+		pa = (unsigned int)va;
+//		pa = (u32)phys;
+
+		printf("allocating %d bytes from %p (%p)\n", size, va, pa);
+	}
+	else
+	{
+		printf("we're out of memory! request of %d bytes\n", size);
+		assert(0);
+	}
+	
+	/*if (free_size > size)
+	{
+		va = (unsigned char *)virt;
+		pa = (unsigned int)va;
+//		pa = (u32)phys;
+
+		printf("allocating %d bytes from %p (%p)\n", size, va, pa);
+
+		virt = (void *)((unsigned int)virt + size);
+		phys = (void *)((unsigned int)phys + size);
+
+		free_size -= size;
+	}
+	else
+	{
+		printf("we're out of memory!\n");
+		assert(0);
+	}*/
+
+	//todo sjh I don't like this...but they do it
+	return new unsigned char;
+#endif
+
 #ifdef PC_BUILD
     va = new unsigned char[size];
-    pa = ((u32)va) | 0x80000000;
+    pa = ((u32)va) /*| 0xfaa00000*/;
+
+    static unsigned int total_size = 0;
+    total_size += size;
+
+    printf("allocated device mem %p->%p %p->%p, %.2f MB\n", va, (void *)((unsigned int)va + size), pa, (void *)((unsigned int)pa + size),
+    		(float)total_size / 1048576);
+
     return new unsigned char;
 #endif
 #ifdef USE_BRALLOC
@@ -147,8 +499,14 @@ void* GhwAllocatorDevice::allocDevMem(u32& pa, unsigned char*& va,u32 size) {
 
 void GhwAllocatorDevice::freeDevMem(u32& pa, unsigned char*& va,u32 size, void* handle) {
 #ifdef PC_BUILD
+#ifdef __ARMEL__
+	printf("free of %p\n");
+	mspace_free(vram, va);
+	delete handle;
+#else
     delete []va;
 	delete handle;
+#endif
 #endif
 #ifdef USE_BRALLOC
 	bralloc_free(handle);
@@ -228,15 +586,32 @@ GhwMemHandle* GhwAllocatorImpl::alloc(u32 size, u32 alignment )
     protect();
     if(alignment < mAlignment) alignment = mAlignment;
 
-    GhwMemBlockNode* node = mList.getHead();
+    /*GhwMemBlockNode* node = mList.getHead();
     while(node) {
         GhwMemBlock* handle = node->get();
-        GhwMemHandle* mem = handle->alloc(size,alignment);
-        if(mem) {
-			unprotect();
-			return mem;
-		}
+        if (handle->getFreeSize() >= size)
+        {
+			GhwMemHandle* mem = handle->alloc(size,alignment);
+			if(mem) {
+				unprotect();
+				return mem;
+			}
+        }
         node = node->getNext();
+    }*/
+
+    std::map<unsigned int, GhwMemBlockNode *>::iterator it;
+    for (it = mList.m_map.begin(); it != mList.m_map.end(); it++)
+    {
+    	GhwMemBlock* handle = it->second->get();
+        if (handle->getFreeSize() >= size)
+        {
+			GhwMemHandle* mem = handle->alloc(size,alignment);
+			if(mem) {
+				unprotect();
+				return mem;
+			}
+        }
     }
 
     u32 alignsize = size ;
@@ -271,21 +646,33 @@ ghw_error_e GhwAllocatorImpl::free(GhwMemHandle* aHandle)
 ghw_error_e GhwAllocatorImpl::reset()
 {
 	protect();
+//	std::map<unsigned int, GhwMemBlockNode *>::iterator it;
+
     GhwMemBlockNode* node = mList.getHead();
     switch (mMode) {
     case GHW_MEM_ALLOC_RETAIN_ALL:
 		{
-    while(node) {
-        node->get()->acquire();
-        node->get()->reset();
-        node->get()->release();
-        node = node->getNext();
-        }
-        break;
+			while(node)
+			{
+				node->get()->acquire();
+				node->get()->reset();
+				node->get()->release();
+				node = node->getNext();
+			}
+			/*for (it = mList.m_map.begin(); it != mList.m_map.end(); it++)
+			{
+				GhwMemBlockNode* node = it->second->get();
+
+				node->get()->acquire();
+				node->get()->reset();
+				node->get()->release();
+			}*/
+			break;
         }
 	default:
 		{
-			while(node) {
+			while(node)
+			{
 				if((mMode == GHW_MEM_ALLOC_RETAIN_ONE) && (mList.getCount() == 1)) {
 					node->get()->acquire();
 					node->get()->reset();
@@ -297,7 +684,7 @@ ghw_error_e GhwAllocatorImpl::reset()
 				delete node->get();
 				mList.removeNode(node);
 				node = mList.getHead();
-				}
+			}
 			break;
 		}
 	}
@@ -321,7 +708,7 @@ ghw_error_e GhwAllocatorImpl::virt2phys(u32& ipa_addr, void* virt_addr)
 {
 	protect();
 	unsigned char* addrin = (unsigned char*) virt_addr;
-	GhwMemBlockNode* node = mList.getHead();
+	/*GhwMemBlockNode* node = mList.getHead();
 	while(node) {
 		u32 ipa,size;
 		unsigned char* addr;
@@ -334,6 +721,23 @@ ghw_error_e GhwAllocatorImpl::virt2phys(u32& ipa_addr, void* virt_addr)
 		}
 		node->get()->unlock();
 		node = node->getNext();
+	}*/
+
+	std::map<unsigned int, GhwMemBlockNode *>::iterator it;
+	for (it = mList.m_map.begin(); it != mList.m_map.end(); it++)
+	{
+		GhwMemBlockNode* node = it->second;
+
+		u32 ipa,size;
+		unsigned char* addr;
+		node->get()->lock(ipa,(void*&)addr,size);
+		if((addrin > addr) && (addrin < (addr +size)) ) {
+			ipa_addr = ipa + ((unsigned int) (addrin-addr));
+			node->get()->unlock();
+			unprotect();
+			return GHW_ERROR_NONE;
+		}
+		node->get()->unlock();
 	}
 
 	unprotect();
@@ -343,7 +747,8 @@ ghw_error_e GhwAllocatorImpl::phys2virt(u32 ipa_addr, void*& virt_addr)
 {
 	protect();
 	unsigned int addrin = (unsigned int) ipa_addr;
-	GhwMemBlockNode* node = mList.getHead();
+
+	/*GhwMemBlockNode* node = mList.getHead();
 	while(node) {
 		u32 ipa,size;
 		unsigned char* addr;
@@ -356,6 +761,23 @@ ghw_error_e GhwAllocatorImpl::phys2virt(u32 ipa_addr, void*& virt_addr)
 		}
 		node->get()->unlock();
 		node = node->getNext();
+	}*/
+
+	std::map<unsigned int, GhwMemBlockNode *>::iterator it;
+	for (it = mList.m_map.begin(); it != mList.m_map.end(); it++)
+	{
+		GhwMemBlockNode* node = it->second;
+
+		u32 ipa,size;
+		unsigned char* addr;
+		node->get()->lock(ipa,(void*&)addr,size);
+		if((addrin > ipa) && (addrin < (ipa +size)) ) {
+			virt_addr = (void*) ( addr + ((unsigned int) (addrin-ipa)));
+			node->get()->unlock();
+			unprotect();
+			return GHW_ERROR_NONE;
+		}
+		node->get()->unlock();
 	}
 
 	unprotect();

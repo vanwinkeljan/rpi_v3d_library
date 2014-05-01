@@ -73,6 +73,7 @@ typedef struct cache_interface cache_interface_t;
 ------------------------------------------------------------------------------*/
 static inline int cacheops(char in_flush, unsigned int pstart,unsigned int vstart,unsigned int size)
 {
+#if 0
 	int fd_cacheops = -1,ret;
     	cache_interface_t cache_data;
 
@@ -97,6 +98,8 @@ static inline int cacheops(char in_flush, unsigned int pstart,unsigned int vstar
         	fd_cacheops = -1;
         	return ret;
      	}
+#endif
+  return 0;
 }
 
 

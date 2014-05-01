@@ -25,9 +25,13 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ============================================================================ */
+#define PC_BUILD
+#include <unistd.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include "ghw_composer_impl.h"
-
+#include <utils/Log.h>
 
 
 namespace ghw {
@@ -41,7 +45,7 @@ GhwComposer* GhwComposer::create(u32 width, u32 height, u32 num_layers)
 
     ghw_composer = new GhwComposerV3d();
     if (ghw_composer == NULL) {
-        ALOGE("%s failed pid[%d]tid[%d] \n", __FUNCTION__, getpid(), gettid());
+        ALOGE("%s failed pid[%d]tid[%d] \n", __FUNCTION__, /*getpid(), gettid(), */ -1, -1);
         return NULL;
     }
 
@@ -49,7 +53,8 @@ GhwComposer* GhwComposer::create(u32 width, u32 height, u32 num_layers)
         ALOGT("%s success[%p] \n", __FUNCTION__, ghw_composer);
         return ghw_composer;
     } else {
-        ALOGE("%s failed pid[%d]tid[%d] \n", __FUNCTION__, getpid(), gettid());
+        ALOGE("%s failed pid[%d]tid[%d] \n", __FUNCTION__, /*getpid(), gettid(),*/ -1, -1);
+//        ALOGE("%s failed pid[%d]tid[%d] \n", __FUNCTION__, /*getpid(), gettid()*/, -1, -1);
         delete ghw_composer;
         return NULL;
     }
@@ -144,7 +149,7 @@ ghw_error_e GhwComposerV3d::init()
     }
 
    ALOGT("%s[%p] fd[%d] \n", __FUNCTION__, this, fdV3d);
-   return GHW_ERROR_NONE;
+    return GHW_ERROR_NONE;
 }
 
 /* Provide an identifier */
@@ -2340,7 +2345,7 @@ GhwImgBuf* GhwImgBuf::create()
 
     img_buf = new GhwImgBufImpl();
     if (img_buf == NULL) {
-        ALOGE("%s failed pid[%d]tid[%d] \n", __FUNCTION__, getpid(), gettid());
+        ALOGE("%s failed pid[%d]tid[%d] \n", __FUNCTION__, /*getpid(), gettid()*/-1, -1);
         return NULL;
     }
     ALOGT("%s success[%p] \n", __FUNCTION__, img_buf);
@@ -2525,7 +2530,7 @@ GhwImgOp* GhwImgOp::create()
 
     img_op = new GhwImgOpImpl();
     if (img_op == NULL) {
-        ALOGE("%s failed pid[%d]tid[%d] \n", __FUNCTION__, getpid(), gettid());
+        ALOGE("%s failed pid[%d]tid[%d] \n", __FUNCTION__, /*getpid(), gettid()*/-1, -1);
         return NULL;
     }
     ALOGT("%s success[%p] \n", __FUNCTION__, img_op);

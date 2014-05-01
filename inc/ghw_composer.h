@@ -81,9 +81,9 @@ enum {
 
     GHW_PIXEL_FORMAT_YUV_444       = 0x1c,
 
-    GHW_PIXEL_FORMAT_Y       		= 0x1d,
-    GHW_PIXEL_FORMAT_U		 		= 0x1e,
-    GHW_PIXEL_FORMAT_V				= 0x1f,
+    GHW_PIXEL_FORMAT_Y             = 0x1d,
+    GHW_PIXEL_FORMAT_U	           = 0x1e,
+    GHW_PIXEL_FORMAT_V	           = 0x1f,
 
     GHW_PIXEL_FORMAT_INVALID        = 0x20
 };

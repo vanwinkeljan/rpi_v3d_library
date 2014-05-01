@@ -28,6 +28,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _V3D_LINUX_H_
 #define _V3D_LINUX_H_
 #include <linux/ioctl.h>
+#include <stdint.h>
 
 #define V3D_DEV_NAME	"v3d"
 #define BCM_V3D_MAGIC	'V'

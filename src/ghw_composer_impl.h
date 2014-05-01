@@ -31,19 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "list.h"
 
-#ifdef PC_BUILD
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
-#include <pthread.h>
-
-#include "proto.h"
-#include "ghw_composer.h"
-#include "ghw_allocator.h"
-
-#else
-
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -71,9 +59,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ghw_composer.h"
 #include "ghw_allocator.h"
 #define ALOGT(x...) do {} while (0)
-
-#endif
-
 
 #define V3D_DEVICE "/dev/v3d"
 
